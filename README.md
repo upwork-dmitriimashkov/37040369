@@ -1,1 +1,14 @@
-# 37040369
+# 37040369 upwork contract
+
+## Installation
+
+```bash
+poetry shell
+poetry install
+```
+
+## Usage
+
+```bash
+poetry run python script_pydeck.py
+```
