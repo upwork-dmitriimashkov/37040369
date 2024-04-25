@@ -1,15 +1,34 @@
 import pydeck as pdk
 import geopandas as gpd
-import pandas as pd
 
-# Load data from a JSON file into a pandas DataFrame
-# The parameters are set to ensure that the data is loaded as strings without any conversion
-df = pd.read_json("sample.json", orient="index", convert_dates=False,
-                  keep_default_dates=False, convert_axes=False, dtype=int, precise_float=False, date_unit=None, )
-# Reset the index of the DataFrame
-df.reset_index(inplace=True)
-# Rename the columns of the DataFrame
-df.columns = ["GEOID", "population"]
+# Function to get data from AWS Glue
+def get_data_from_glue():
+    """
+    This function retrieves data from an AWS Glue catalog. It specifically loads a table named 'aggregation.mmr'
+    and filters rows where 'AGGR_CATEGORY' equals 'GEOID'. It selects the 'FIPS_GEOID' and 'count' fields.
+    The resulting DataFrame is returned with columns renamed to 'GEOID' and 'population'.
+    """
+    from pyiceberg.catalog import load_catalog
+
+    # Load the catalog named 'docs' of type 'glue'
+    catalog = load_catalog("docs", **{"type": "glue"})
+
+    # Load the table 'aggregation.mmr' from the catalog
+    table = catalog.load_table("aggregation.mmr")
+
+    # Scan the table with a filter and selected fields, convert the result to a pandas DataFrame
+    mmr = table.scan(
+        row_filter="AGGR_CATEGORY = 'GEOID'",
+        selected_fields=("FIPS_GEOID", "count"),
+    ).to_pandas()
+
+    # Rename the columns of the DataFrame
+    mmr.columns = ["GEOID", "population"]
+
+    return mmr
+
+# Call the function to get data from AWS Glue
+df = get_data_from_glue()
 
 # Load a GeoJSON file into a GeoDataFrame
 gdf = gpd.read_file('mi1.json', geometry='geometry')
